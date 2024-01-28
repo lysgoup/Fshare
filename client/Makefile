@@ -1,9 +1,11 @@
+TEST = -DMAIN
+
 ifdef thread
 	LIBS += -lpthread
 endif
 
 ifdef main
-	TEST = -DMAIN
+	TEST =
 endif
 
 ifdef debug
@@ -14,4 +16,4 @@ endif
 	gcc -o $@ $^ $(LIBS) $(TEST) $(DBUG)
 
 clean:
-	rm client server
+	rm fshare fshared
