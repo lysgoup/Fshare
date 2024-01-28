@@ -8,6 +8,12 @@
 #include <string.h> 
 #include <pthread.h>
 
+#ifdef DEBUG
+	#define debug(fn) fn
+#else
+	#define debug(fn)
+#endif
+
 void *
 child_thread(void *sock)
 {
@@ -43,13 +49,41 @@ child_thread(void *sock)
 		free(orig) ;
 }
 
+#ifdef MAIN
 int 
-main(int argc, char const *argv[]) 
+main(int argc, char *argv[]) 
 {
+	int opt;
+	int port_num;
+	char *dir_name;
+	if(argc < 5){
+		fprintf(stderr, "Usage: %s [-p port_num] [-d dir_name]\n", argv[0]);
+        return 1;	
+	}
+	while((opt = getopt(argc, argv, "p:d:")) != -1){
+		switch(opt){
+			case 'p':
+				sscanf(optarg, "%d\n", &port_num);
+				if(port_num < 1024 || port_num > 49151){
+					perror("Invalid port number");
+					exit(EXIT_FAILURE);
+				}
+				break;
+			case 'd':
+				dir_name = (char *)malloc(strlen(optarg));
+				memcpy(dir_name, optarg, strlen(optarg));
+				break;
+			default:
+				fprintf(stderr, "Usage: %s [-p port_num] [-d dir_name]\n", argv[0]);
+                return 1;
+		}
+	}
+	debug(printf("port num: %d\n",port_num));
+	debug(printf("dir name: %s\n",dir_name));
+
     pthread_t tid;
 	int listen_fd, new_socket ; 
 	struct sockaddr_in address; 
-	int opt = 1; 
 	int addrlen = sizeof(address); 
 
 	char buffer[1024] = {0}; 
@@ -63,7 +97,7 @@ main(int argc, char const *argv[])
 	memset(&address, '0', sizeof(address)); 
 	address.sin_family = AF_INET; 
 	address.sin_addr.s_addr = INADDR_ANY /* the localhost*/ ; 
-	address.sin_port = htons(8080); 
+	address.sin_port = htons(port_num); 
 	if (bind(listen_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
 		perror("bind failed : "); 
 		exit(EXIT_FAILURE); 
@@ -88,3 +122,4 @@ main(int argc, char const *argv[])
 		// close(new_socket);
 	}
 } 
+#endif
