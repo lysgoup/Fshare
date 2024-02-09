@@ -78,6 +78,44 @@ send_bytes(int sock, void *buf, size_t len)
 }
 
 void
+send_list_subdir(char *subdir_path, int sock_fd)
+{
+	debug(printf("This is send_list_subdir\n");) 
+	DIR *subdir = opendir(subdir_path);	
+	if(subdir == NULL){
+		fprintf(stderr,"Cannot open dir %s\n",subdir_path);
+		return;
+	}
+	struct dirent *entry;
+	while((entry = readdir(subdir)) != NULL){
+		if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+			continue;
+		}
+		size_t file_path_size = strlen(subdir_path)+strlen(entry->d_name)+2;
+		char *file_path = (char *)malloc(file_path_size);
+		snprintf(file_path,file_path_size,"%s/%s",subdir_path,entry->d_name);
+		char *name = file_path + strlen(dir_path) + 1;
+		size_t name_len = strlen(name);
+		if(send_bytes(sock_fd,(void *)&name_len,sizeof(name_len))){
+			fprintf(stderr,"send name_len error\n");
+			return;
+		}
+		if(send_bytes(sock_fd,(void *)name,strlen(name))){
+			fprintf(stderr,"send name error\n");
+			return;
+		}
+		debug(printf("%s : %ld\n",name,strlen(name));)
+		struct stat filestat;
+		stat(file_path,&filestat);
+		if(S_ISDIR(filestat.st_mode)){
+			send_list_subdir(file_path,sock_fd);
+		}
+		free(file_path);
+	}
+	closedir(subdir);	
+}
+
+void
 send_list(int sock_fd)
 {
 	pthread_mutex_lock(&dir_lock);
@@ -89,7 +127,6 @@ send_list(int sock_fd)
 		}
 		char *name = entry->d_name;
 		size_t name_len = strlen(name);
-		debug(printf("%s : %ld\n",name,name_len);)
 		if(send_bytes(sock_fd,(void *)&name_len,sizeof(name_len))){
 			fprintf(stderr,"send name_len error\n");
 			return;
@@ -98,6 +135,15 @@ send_list(int sock_fd)
 			fprintf(stderr,"send name error\n");
 			return;
 		}
+		debug(printf("%s : %ld\n",name,strlen(name));)
+		char *file_path = (char *)malloc(strlen(dir_path)+name_len+1);
+		snprintf(file_path,strlen(dir_path)+name_len+2,"%s/%s",dir_path,name);
+		struct stat filestat;
+		stat(file_path,&filestat);
+		if(S_ISDIR(filestat.st_mode)){
+			send_list_subdir(file_path,sock_fd);
+		}
+		free(file_path);
 	}
 	shutdown(sock_fd,SHUT_WR);
 	pthread_mutex_unlock(&dir_lock);

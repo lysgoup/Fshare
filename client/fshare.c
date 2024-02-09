@@ -77,10 +77,12 @@ recv_list(int sock_fd)
 		char *name = (char *)malloc(name_len+1);
 		if(recv_bytes(sock_fd,(void *)name,name_len)){
 			fprintf(stderr,"recv name error");
+			free(name);
 			return;
 		}
 		name[name_len] = '\0';
 		printf("%s\n",name);
+		free(name);
 	}
 }
 
@@ -163,7 +165,7 @@ main(int argc, char *argv[])
 	sscanf(strtok(NULL,":"),"%d",&port_num);
 	if(port_num < 1024 || port_num > 49151){
 		fprintf(stderr, "Invalid port number\n Usage: %s [ip_addr:port_num] [command]\n",argv[0]);
-		exit(EXIT_FAILURE);
+		return 0;
 	}
 	debug(printf("IP address: %s\n",ip_addr));
 	debug(printf("Port Number: %d\n",port_num));
@@ -172,7 +174,7 @@ main(int argc, char *argv[])
 	cmd = get_cmd(argv[2]);
 	if(cmd == N_OP){
 		fprintf(stderr, "Invalid command\n");
-		exit(EXIT_FAILURE);
+		return 0;
 	}
 	debug(printf("cmd: %d\n",cmd);)
 
@@ -181,17 +183,17 @@ main(int argc, char *argv[])
 	serv_addr.sin_port = htons(port_num); 
 	if (inet_pton(AF_INET, ip_addr, &serv_addr.sin_addr) <= 0) {
 		perror("inet_pton failed") ; 
-		exit(EXIT_FAILURE) ;
+		return 0;
 	} 
 
 	if (connect(sock_fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
 		perror("connect failed") ;
-		exit(EXIT_FAILURE) ;
+		return 0;
 	}
 	
 	if(send_bytes(sock_fd,(void *)&cmd,sizeof(cmd)) == 1){
 		perror("send_bytes error");
-		exit(EXIT_FAILURE);
+		return 0;
 	}
 	
 	switch(cmd){
