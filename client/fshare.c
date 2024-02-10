@@ -99,7 +99,15 @@ download_file(int sock_fd, char *filename)
 		return;
 	}
 	debug(printf("filesize: %lld\n",filesize));
-
+	
+	if(strtok(filename,"/")!=NULL){
+		char *temp, *token;
+		while((token=strtok(NULL,"/"))!=NULL){
+			temp = token;
+		}
+		filename=temp;
+	}
+	debug(printf("filename: %s\n",filename);)
 	FILE *fp = fopen(filename,"wb");
 	char buf[BUF_SIZE];
 	int received;
