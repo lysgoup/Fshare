@@ -140,7 +140,10 @@ upload_file(int sock_fd, char *filename)
 	}
 	shutdown(sock_fd,SHUT_WR);
 	fclose(fp);
-	printf("[%d] %s uploaded\n",sock_fd,filename);
+	int error_check;
+	recv_bytes(sock_fd,&error_check,sizeof(error_check));
+	if(error_check==0) printf("[%d] %s uploaded\n",sock_fd,filename);
+	else printf("[%d] %s upload failed\n",sock_fd,filename);
 }
 
 #ifdef MAIN

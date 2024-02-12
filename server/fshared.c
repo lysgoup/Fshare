@@ -201,24 +201,48 @@ recv_file(int sock_fd)
 		fprintf(stderr,"failed to receive file\n");
 		return;
 	}
-	char filename[filename_len+1];
+	char *filename = (char *)malloc(filename_len+1);
 	recv_bytes(sock_fd,(void *)filename,filename_len);
 	filename[filename_len] = '\0';
+
+	debug(printf("filename: %s\n",filename);)
+		
+	char *temp=NULL, *token;
+	if(strtok(filename,"/")!=NULL){
+		while((token=strtok(NULL,"/"))!=NULL){
+				free(temp);
+				temp = strdup(token);
+		}
+		free(filename);
+		filename = temp;
+	}
+	
 	char filepath[FILE_PATH_SIZE];
 	snprintf(filepath,sizeof(filepath),"%s/%s",dir_path,filename);
+	debug(printf("filepath: %s\n",filepath);)
 
 	pthread_mutex_lock(&dir_lock);
+	int error_check;
 	FILE *fp = fopen(filepath,"wb");
-	char buf[BUF_SIZE];
-	int received;
-	long long count = 0;
-	while((received= recv(sock_fd,buf,sizeof(buf),0)) > 0){
-		fwrite(buf,1,received,fp);
+	if(fp==NULL){
+		perror("Cannot make file");
+		error_check=1;
 	}
-	fclose(fp);
+	else{
+		char buf[BUF_SIZE];
+		int received;
+		long long count = 0;
+		while((received= recv(sock_fd,buf,sizeof(buf),0)) > 0){
+			fwrite(buf,1,received,fp);
+		}
+		fclose(fp);
+		printf("[%d] reveive %s success\n",sock_fd,filepath);
+	}
 	pthread_mutex_unlock(&dir_lock);
-	printf("[%d] reveive %s success\n",sock_fd,filepath);
-}
+	send_bytes(sock_fd,&error_check,sizeof(error_check));
+	debug(printf("error_check: %d\n",error_check);)
+}	
+
 
 void *
 handle_client(void *sock)
